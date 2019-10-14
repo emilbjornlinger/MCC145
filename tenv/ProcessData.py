@@ -2,9 +2,6 @@ import numpy as np
 import pickle
 from time import sleep, time
 
-import pyqtgraph as pg
-from PyQt5 import QtCore
-
 from acconeer_utils.clients import UARTClient, SPIClient, SocketClient
 from acconeer_utils.clients import configs
 from acconeer_utils import example_utils
@@ -12,10 +9,11 @@ from acconeer_utils.pg_process import PGProcess, PGProccessDiedException
 
 
 def main():
-    loadData()
-    #sensorRead()
+    load_data()
+    # sensor_read()
 
-def sensorRead():
+
+def sensor_read():
     args = example_utils.ExampleArgumentParser(num_sens=1).parse_args()
     example_utils.config_logging(args)
 
@@ -48,15 +46,15 @@ def sensorRead():
 
         if plot_data is not None:
             try:
-                #pg_process.put_data(plot_data) # Does this need to happen?
+                # pg_process.put_data(plot_data) # Does this need to happen?
 
                 print(type(plot_data))
                 print(plot_data)
                 input("Enter")
                 print(plot_data["abs"])
 
-
                 # This is where the processing comes in
+                # Call customProcess
 
                 # Create a vector that is of correct length, then look at the history, call processVEctor
             except PGProccessDiedException:
@@ -74,81 +72,51 @@ def get_sensor_config():
     config.gain = 0.7
     return config
 
-#Load data, (timing, counter), calls ProcessVector()
 
-def loadData():
-
+def load_data():
     # get data
-    #fileName = input("File to import: ")
-    fileName = "sample.pkl"
-    with open(fileName, "rb") as infile:
+    file_name = "sample.pkl"
+    with open(file_name, "rb") as infile:
         data = pickle.load(infile)
-    # fileNameMeta = input("MetaFile to import: ")
-    fileNameMeta = "metasample.pkl"
-    with open(fileNameMeta, "rb") as infile:
-        sessionInfo = pickle.load(infile)
+    file_name_meta = "metasample.pkl"
+    with open(file_name_meta, "rb") as infile:
+        session_info = pickle.load(infile)
 
-    # Acquire metadata
-    rangeStart = sessionInfo["actual_range_start"]
-    rangeLength = sessionInfo["actual_range_length"]
-    sweepRate = sessionInfo["frequency"]
-    dataLength = sessionInfo["data_length"]
-    #numSweeps = int(input("Number of sweeps:"))
-    numSweeps = 700
-    #historyTime = int(input("Define time span to evaluate: "))
-    historyTime = 1
+    # Extract metadata
+    range_start = session_info["actual_range_start"]
+    range_length = session_info["actual_range_length"]
+    sweep_rate = session_info["frequency"]
+    data_length = session_info["data_length"]
 
-    pg_updater = PGUpdater(sweepRate, [rangeStart, rangeStart + rangeLength])
-    pg_process = PGProcess(pg_updater)
-    pg_process.start()
-
-    processor = PhaseTrackingProcessor(sweepRate)
+    processor = PhaseTrackingProcessor(sweep_rate)
 
     # Set sleep behaviour
-    useSleep = False
+    use_sleep = False
     ans = input("Use sleep: [Y/n]")
     if ans == "Y" or ans == "y":
-        useSleep = True
-
-    # Loop through data array, build currentArray
-    currentArray = []
-
-    # Used for sleep time
-    perTime = 1 / sweepRate
+        use_sleep = True
+    per_time = 1 / sweep_rate
 
     for i in data:
-        startTime = time()
-
-        currentArray.append(i)
-        if len(currentArray) > sweepRate * historyTime:
-            currentArray.pop(0)
-
-        # Process data
-        plot_data = processor.process(currentArray[-1])
-
-
+        start_time = time()
+        plot_data = processor.process(i)
 
         if plot_data is not None:
-            #pg_process.put_data(plot_data)
-            print(type(plot_data))
-            print(plot_data)
-            input("Enter")
-            print(plot_data["abs"])
             abs = plot_data["abs"]
             maxVal = np.amax(abs)
-            print(maxVal)
-
+            print("MaxValue:", maxVal)
 
         # Handle sleep time
-        if useSleep:
-            endTime = time()
-            sleepTime = perTime - (endTime - startTime)
-            if sleepTime > 0:
-                sleep(sleepTime)
+        if use_sleep:
+            end_time = time()
+            sleep_time = per_time - (end_time - start_time)
+            if sleep_time > 0:
+                sleep(sleep_time)
+
 
 class PhaseTrackingProcessor:
-    def __init__(self, sweepRate):
-        self.f = sweepRate
+    def __init__(self, sweep_rate):
+        self.f = sweep_rate
         self.dt = 1 / self.f
 
         num_hist_points = int(round(self.f * 3))
@@ -163,9 +131,9 @@ class PhaseTrackingProcessor:
         n = len(sweep)
 
         ampl = np.abs(sweep)
-        power = ampl*ampl
+        power = ampl * ampl
         if np.sum(power) > 1e-6:
-            com = np.sum(np.arange(n)/n * power) / np.sum(power)  # center of mass
+            com = np.sum(np.arange(n) / n * power) / np.sum(power)  # center of mass
         else:
             com = 0
 
@@ -175,16 +143,16 @@ class PhaseTrackingProcessor:
             plot_data = None
         else:
             a = self.alpha(0.1, self.dt)
-            self.lp_ampl = a*ampl + (1 - a)*self.lp_ampl
+            self.lp_ampl = a * ampl + (1 - a) * self.lp_ampl
             a = self.alpha(0.25, self.dt)
-            self.lp_com = a*com + (1-a)*self.lp_com
+            self.lp_com = a * com + (1 - a) * self.lp_com
 
             com_idx = int(self.lp_com * n)
             delta_angle = np.angle(sweep[com_idx] * np.conj(self.last_sweep[com_idx]))
-            vel = self.f * 2.5 * delta_angle / (2*np.pi)
+            vel = self.f * 2.5 * delta_angle / (2 * np.pi)
 
             a = self.alpha(0.1, self.dt)
-            self.lp_vel = a*vel + (1 - a)*self.lp_vel
+            self.lp_vel = a * vel + (1 - a) * self.lp_vel
 
             self.hist_vel = np.roll(self.hist_vel, -1)
             self.hist_vel[-1] = self.lp_vel
@@ -195,9 +163,9 @@ class PhaseTrackingProcessor:
 
             hist_len = len(self.hist_pos)
             plot_hist_pos = self.hist_pos - self.hist_pos.mean()
-            plot_hist_pos_zoom = self.hist_pos[hist_len//2:] - self.hist_pos[hist_len//2:].mean()
+            plot_hist_pos_zoom = self.hist_pos[hist_len // 2:] - self.hist_pos[hist_len // 2:].mean()
 
-            iq_val = np.exp(1j*np.angle(sweep[com_idx])) * self.lp_ampl[com_idx]
+            iq_val = np.exp(1j * np.angle(sweep[com_idx])) * self.lp_ampl[com_idx]
 
             plot_data = {
                 "abs": self.lp_ampl,
@@ -213,15 +181,16 @@ class PhaseTrackingProcessor:
         return plot_data
 
     def alpha(self, tau, dt):
-        return 1 - np.exp(-dt/tau)
+        return 1 - np.exp(-dt / tau)
+
 
 class PGUpdater:
-    def __init__(self, sweepRate, rangeInterval):
-        self.sweepRate = sweepRate
-        self.interval = rangeInterval
+    def __init__(self, sweep_rate, range_interval):
+        self.sweep_rate = sweep_rate
+        self.interval = range_interval
 
     def setup(self, win):
-        win.close() # Really awful way to do it, works though
+        win.close()  # Really awful way to do it, works though
         '''
         win.resize(800, 600)
         win.setWindowTitle("Acconeer phase tracking example")
@@ -292,37 +261,32 @@ class PGUpdater:
         self.iq_curve.setData([0, np.real(data["iq_val"])], [0, np.imag(data["iq_val"])])
         self.iq_scatter.setData([np.real(data["iq_val"])], [np.imag(data["iq_val"])])
 
-#ProcessVector(Array, metadataObject/list, how many iterations detection has been present, what the velocity has been so far, where it was detected, where it is now, this is what's get updated,
-# if the time presence has been detected reaches a certain threshold the counter should get updated)
 
 class customProcess:
-    def __init__(self, rangeInterval, rangeStart, distanceThreshold, dataLength, inValue, personCounter = 0):
-        self.presenceArray = []
-        self.rangeInterval = rangeInterval
-        self.rangeStart = rangeStart
-        self.distanceThreshold = distanceThreshold
-        self.dataLength = dataLength
-        self.inValue = inValue
-        self.personCounter = personCounter
+    def __init__(self, range_interval, range_start, distance_threshold, data_length, in_value, person_counter=0):
+        self.presence_array = []
+        self.range_interval = range_interval
+        self.range_start = range_start
+        self.distance_threshold = distance_threshold
+        self.data_length = data_length
+        self.in_value = in_value
+
+        self.person_counter = person_counter
 
     def process(self, data):
         # Check if over threshold
-        if np.amax(data["abs"]) > self.distanceThreshold: # This needs finetuning, create a delay effect
-            self.presenceArray.append(data)
+        if np.amax(data["abs"]) > self.distance_threshold:  # This needs finetuning, create a delay effect
+            self.presence_array.append(data)
         # Else check if last was and evaluate and clear
         else:
-            if len(self.presenceArray) > 0:
-                self.evaluateDetection(self.presenceArray)
-                self.presenceArray.clear()
+            if len(self.presence_array) > 0:
+                self.evaluate_detection(self.presence_array)
+                self.presence_array.clear()
 
-    def evaluateDetection(self, detection):
+    def evaluate_detection(self, detection):
         distance = detection(-1)["com"] - detection(0)["com"]
-        if abs(distance) > self.distanceThreshold:
-            x = 1 #Continue here
-            # Check if you can find a workaround for put_data problem
-
-
-
+        if abs(distance) > self.distance_threshold:
+            x = 1  # Continue here
 
 
 if __name__ == "__main__":
