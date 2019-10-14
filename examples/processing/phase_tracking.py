@@ -1,6 +1,7 @@
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtCore
+import pickle
 
 from acconeer_utils.clients import SocketClient, SPIClient, UARTClient
 from acconeer_utils.clients import configs
@@ -25,7 +26,7 @@ def main():
 
     processing_config = get_processing_config()
 
-    client.setup_session(sensor_config)
+    session_info = client.setup_session(sensor_config)
 
     pg_updater = PGUpdater(sensor_config, processing_config)
     pg_process = PGProcess(pg_updater)
@@ -38,15 +39,27 @@ def main():
 
     processor = PhaseTrackingProcessor(sensor_config, processing_config)
 
+    # Record data
+    data = []
+    counter = 0
+
     while not interrupt_handler.got_signal:
         info, sweep = client.get_next()
         plot_data = processor.process(sweep)
+        data.append(sweep)
+        counter += 1
 
         if plot_data is not None:
             try:
                 pg_process.put_data(plot_data)
             except PGProccessDiedException:
                 break
+
+    # Save to file
+    with open("data" + str(get_sensor_config().sweep_rate) + str(counter) + ".pkl", "wb") as outfile:
+        pickle.dump(data, outfile, pickle.HIGHEST_PROTOCOL)
+    with open("metadata" + str(get_sensor_config().sweep_rate) + str(counter) + ".pkl", "wb") as outfile:
+        pickle.dump(session_info, outfile, pickle.HIGHEST_PROTOCOL)
 
     print("Disconnecting...")
     pg_process.close()
@@ -55,8 +68,8 @@ def main():
 
 def get_sensor_config():
     config = configs.IQServiceConfig()
-    config.range_interval = [0.3, 0.6]
-    config.sweep_rate = 80
+    config.range_interval = [0.3, 0.8]
+    config.sweep_rate = 70
     config.gain = 0.7
     return config
 

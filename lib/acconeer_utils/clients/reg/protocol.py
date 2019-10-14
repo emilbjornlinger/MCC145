@@ -341,7 +341,7 @@ REGS = [
     Reg(
         "running_average_factor",
         "envelope",
-        64,
+        65,
         "rw",
         "u",
         float_to_milli_enc_funs,

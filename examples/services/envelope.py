@@ -22,8 +22,8 @@ def main():
 
     config = configs.EnvelopeServiceConfig()
     config.sensor = args.sensors
-    config.range_interval = [0.2, 0.6]
-    config.sweep_rate = 60
+    config.range_interval = [0.3, 0.8]
+    config.sweep_rate = 70
     config.gain = 0.6
     # config.experimental_stitching = True
     # config.session_profile = configs.EnvelopeServiceConfig.MAX_SNR
@@ -47,6 +47,8 @@ def main():
 
         try:
             pg_process.put_data(data)
+            print(data)
+            input("Enter")
         except PGProccessDiedException:
             break
 
