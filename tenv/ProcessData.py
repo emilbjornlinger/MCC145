@@ -9,8 +9,8 @@ from acconeer_utils.pg_process import PGProcess, PGProccessDiedException
 
 
 def main():
-    load_data()
-    # sensor_read()
+    #load_data()
+    sensor_read()
 
 
 def sensor_read():
@@ -28,11 +28,7 @@ def sensor_read():
     sensor_config = get_sensor_config()
     sensor_config.sensor = args.sensors
 
-    session_info = client.setup_session(sensor_config)
-
-    pg_updater = PGUpdater(sensor_config.sweep_rate, sensor_config.range_interval)
-    pg_process = PGProcess(pg_updater)
-    pg_process.start()
+    session_info = client.setup_session(sensor_config) # Needed for customProcess
 
     client.start_streaming()
 
@@ -46,12 +42,7 @@ def sensor_read():
 
         if plot_data is not None:
             try:
-                # pg_process.put_data(plot_data) # Does this need to happen?
-
-                print(type(plot_data))
-                print(plot_data)
-                input("Enter")
-                print(plot_data["abs"])
+                print(np.amax(plot_data["abs"]))
 
                 # This is where the processing comes in
                 # Call customProcess
@@ -61,7 +52,6 @@ def sensor_read():
                 break
 
     print("Disconnecting...")
-    pg_process.close()
     client.disconnect()
 
 
@@ -97,6 +87,9 @@ def load_data():
         use_sleep = True
     per_time = 1 / sweep_rate
 
+    # Instantiate customProcess
+    custom_processor = customProcess(range_length, range_start, 0.2, data_length, -1)
+
     for i in data:
         start_time = time()
         plot_data = processor.process(i)
@@ -105,6 +98,10 @@ def load_data():
             abs = plot_data["abs"]
             maxVal = np.amax(abs)
             print("MaxValue:", maxVal)
+
+            if custom_processor.evaluate_detection(plot_data) == True:
+                # look at personcounter and convey information
+                x = 1
 
         # Handle sleep time
         if use_sleep:
@@ -184,84 +181,6 @@ class PhaseTrackingProcessor:
         return 1 - np.exp(-dt / tau)
 
 
-class PGUpdater:
-    def __init__(self, sweep_rate, range_interval):
-        self.sweep_rate = sweep_rate
-        self.interval = range_interval
-
-    def setup(self, win):
-        win.close()  # Really awful way to do it, works though
-        '''
-        win.resize(800, 600)
-        win.setWindowTitle("Acconeer phase tracking example")
-
-        self.abs_plot = win.addPlot(row=0, col=0)
-        self.abs_plot.showGrid(x=True, y=True)
-        self.abs_plot.setLabel("left", "Amplitude")
-        self.abs_plot.setLabel("bottom", "Depth (m)")
-        self.abs_curve = self.abs_plot.plot(pen=example_utils.pg_pen_cycler(0))
-        pen = example_utils.pg_pen_cycler(1)
-        pen.setStyle(QtCore.Qt.DashLine)
-        self.abs_inf_line = pg.InfiniteLine(pen=pen)
-        self.abs_plot.addItem(self.abs_inf_line)
-
-        self.arg_plot = win.addPlot(row=1, col=0)
-        self.arg_plot.showGrid(x=True, y=True)
-        self.arg_plot.setLabel("bottom", "Depth (m)")
-        self.arg_plot.setLabel("left", "Phase")
-        self.arg_plot.setYRange(-np.pi, np.pi)
-        self.arg_plot.getAxis("left").setTicks(example_utils.pg_phase_ticks)
-        self.arg_curve = self.arg_plot.plot(pen=example_utils.pg_pen_cycler(0))
-        self.arg_inf_line = pg.InfiniteLine(pen=pen)
-        self.arg_plot.addItem(self.arg_inf_line)
-
-        self.iq_plot = win.addPlot(row=1, col=1, title="IQ at line")
-        example_utils.pg_setup_polar_plot(self.iq_plot, 0.5)
-        self.iq_curve = self.iq_plot.plot(pen=example_utils.pg_pen_cycler())
-        self.iq_scatter = pg.ScatterPlotItem(
-            brush=pg.mkBrush(example_utils.color_cycler()),
-            size=15,
-        )
-        self.iq_plot.addItem(self.iq_scatter)
-
-        self.hist_plot = win.addPlot(row=0, col=1, colspan=2)
-        self.hist_plot.showGrid(x=True, y=True)
-        self.hist_plot.setLabel("bottom", "Time (s)")
-        self.hist_plot.setLabel("left", "Tracking (mm)")
-        self.hist_curve = self.hist_plot.plot(pen=example_utils.pg_pen_cycler())
-        self.hist_plot.setYRange(-5, 5)
-
-        self.hist_zoom_plot = win.addPlot(row=1, col=2)
-        self.hist_zoom_plot.showGrid(x=True, y=True)
-        self.hist_zoom_plot.setLabel("bottom", "Time (s)")
-        self.hist_zoom_plot.setLabel("left", "Tracking (mm)")
-        self.hist_zoom_curve = self.hist_zoom_plot.plot(pen=example_utils.pg_pen_cycler())
-        self.hist_zoom_plot.setYRange(-0.5, 0.5)
-
-        self.smooth_max = example_utils.SmoothMax(self.sweepRate)
-        self.first = True
-        '''
-
-    def update(self, data):
-        if self.first:
-            self.xs = np.linspace(*self.interval, len(data["abs"]))
-            self.ts = np.linspace(-3, 0, len(data["hist_pos"]))
-            self.ts_zoom = np.linspace(-1.5, 0, len(data["hist_pos_zoom"]))
-            self.first = False
-
-        com_x = (1 - data["com"]) * self.interval[0] + data["com"] * self.interval[1]
-
-        self.abs_curve.setData(self.xs, data["abs"])
-        self.abs_plot.setYRange(0, self.smooth_max.update(np.amax(data["abs"])))
-        self.abs_inf_line.setValue(com_x)
-        self.arg_curve.setData(self.xs, data["arg"])
-        self.arg_inf_line.setValue(com_x)
-        self.hist_curve.setData(self.ts, data["hist_pos"])
-        self.hist_zoom_curve.setData(self.ts_zoom, data["hist_pos_zoom"])
-        self.iq_curve.setData([0, np.real(data["iq_val"])], [0, np.imag(data["iq_val"])])
-        self.iq_scatter.setData([np.real(data["iq_val"])], [np.imag(data["iq_val"])])
-
-
 class customProcess:
     def __init__(self, range_interval, range_start, distance_threshold, data_length, in_value, person_counter=0):
         self.presence_array = []
@@ -280,13 +199,61 @@ class customProcess:
         # Else check if last was and evaluate and clear
         else:
             if len(self.presence_array) > 0:
-                self.evaluate_detection(self.presence_array)
+                update_val = self.evaluate_detection(self.presence_array)
                 self.presence_array.clear()
+                return update_val
 
     def evaluate_detection(self, detection):
-        distance = detection(-1)["com"] - detection(0)["com"]
-        if abs(distance) > self.distance_threshold:
-            x = 1  # Continue here
+        ampl_dist = detection(-1)["com"] - detection(0)["com"]
+        ampl_dir = 0
+        phase_dir = 0
+        phase_dist = 0
+        if abs(ampl_dist) > self.distance_threshold:
+            if ampl_dist < 0:
+                ampl_dir = -1
+            else:
+                ampl_dir = 1
+            phase_val = self.evaluate_phase(detection)
+            phase_dir = phase_val(0)
+            phase_dist = phase_val(1)
+            if phase_dir == ampl_dir and phase_dist > self.distance_threshold:
+                if phase_dir == self.in_value:
+                    self.person_counter += 1
+                    return True
+                else:  # ampl_dir can't be 0, so phase_dir != 0, so no need to check for 0
+                    self.person_counter -= 1
+                    return True
+        else:
+            return False
+
+    def evaluate_phase(self, detection):
+
+        # loop through detection
+        angle_arr = []
+        for i in detection: # Is it data length we want to look at? Gives num points in the array?
+            # get data index from com, not exact? Shouldn't matter since there will still be reliable phase at com?
+            com = i["com"]
+            fract_into_data_length = ((com - self.range_start) / self.range_interval) * self.data_length
+            phase_index = round(fract_into_data_length)
+            angle_arr.append(detection["arg"](phase_index)) #  Typecast instead?
+
+        # Unwrap to get real phase
+        angle_arr = np.unwrap(angle_arr)
+
+        # Calculate total angle shift
+        #total_shift =
+
+        # Get distance and then direction from this
+        #phase_dist =
+        #phase_dir =
+
+
+        # return list with dir and dist
+        val = []
+        val.append(-1)
+        val.append(0.2)
+        return val
+
 
 
 if __name__ == "__main__":
