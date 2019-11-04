@@ -114,9 +114,12 @@ def load_data():
     # Instantiate customProcess
     custom_processor = customProcess(range_length, range_start, AMPL_THRESHOLD, DIST_THRESHOLD, data_length, -1)
 
+    counter = 0
+
     for i in data:
         start_time = time()
         plot_data = processor.process(i)
+        counter += 1
 
         if plot_data is not None:
             if DEBUG_PRINT:
@@ -124,7 +127,14 @@ def load_data():
                 maxVal = np.amax(abs)
                 print("MaxValue:", maxVal)
             else:
-                if custom_processor.process(plot_data):
+
+                #DEBUG
+
+                returnVal = custom_processor.process(plot_data)
+                if returnVal != None:
+                    print("Iteration: ", counter)
+                    input("Enter")
+                if returnVal:
                     person_counter = custom_processor.person_counter
                     if person_counter == 1:
                         print("1 person in the room")
@@ -138,6 +148,7 @@ def load_data():
             if sleep_time > 0:
                 sleep(sleep_time)
 
+    print("Counter finish:", counter)
 
 class PhaseTrackingProcessor:
     def __init__(self, sweep_rate):
