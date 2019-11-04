@@ -293,7 +293,7 @@ class customProcess:
         if DEBUG:
             print("angle_arr[-1]:", angle_arr[-1])
             print("angle_arr[0]:", angle_arr[0])
-            print("total_shift:" , total_shift)
+            print("total_shift:", total_shift)
 
         # Get distance and then direction from this
         phase_dist = self.wavelength*(total_shift/(4*np.pi))
