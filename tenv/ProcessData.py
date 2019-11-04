@@ -23,8 +23,8 @@ DEBUG_PRINT = False
 
 
 def main():
-    load_data()
-    #sensor_read()
+    #load_data()
+    sensor_read()
 
 
 def sensor_read():
@@ -69,8 +69,10 @@ def sensor_read():
                     person_counter = custom_processor.person_counter
                     if person_counter == 1:
                         print("1 person in the room")
+                        input("Enter")
                     else:
                         print(person_counter, " persons in the room")
+                        input("Enter")
 
             except PGProccessDiedException:
                 break
@@ -89,10 +91,10 @@ def get_sensor_config():
 
 def load_data():
     # get data
-    file_name = "data2.pkl"
+    file_name = "data1.pkl"
     with open(file_name, "rb") as infile:
         data = pickle.load(infile)
-    file_name_meta = "metadata2.pkl"
+    file_name_meta = "metadata1.pkl"
     with open(file_name_meta, "rb") as infile:
         session_info = pickle.load(infile)
 
