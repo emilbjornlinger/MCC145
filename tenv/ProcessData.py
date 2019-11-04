@@ -13,18 +13,10 @@ AMPL_THRESHOLD = 0.03
 DEBUG = True
 DEBUG_PRINT = False
 
-#
-#
-#
-#
-#
-#
-# DEBUG exactly this
-
 
 def main():
-    #load_data()
-    sensor_read()
+    load_data()
+    #sensor_read()
 
 
 def sensor_read():
@@ -91,10 +83,10 @@ def get_sensor_config():
 
 def load_data():
     # get data
-    file_name = "data1.pkl"
+    file_name = "data2.pkl"
     with open(file_name, "rb") as infile:
         data = pickle.load(infile)
-    file_name_meta = "metadata1.pkl"
+    file_name_meta = "metadata2.pkl"
     with open(file_name_meta, "rb") as infile:
         session_info = pickle.load(infile)
 
@@ -132,16 +124,24 @@ def load_data():
 
                 #DEBUG
 
-                returnVal = custom_processor.process(plot_data)
-                if returnVal != None:
-                    print("Iteration: ", counter)
-                    input("Enter")
-                if returnVal:
-                    person_counter = custom_processor.person_counter
-                    if person_counter == 1:
-                        print("1 person in the room")
-                    else:
-                        print(person_counter, " persons in the room")
+                if DEBUG:
+                    returnVal = custom_processor.process(plot_data)
+                    if returnVal != None:
+                        print("Iteration: ", counter)
+                        input("Enter")
+                    if returnVal:
+                        person_counter = custom_processor.person_counter
+                        if person_counter == 1:
+                            print("1 person in the room")
+                        else:
+                            print(person_counter, " persons in the room")
+                else:
+                    if custom_processor.process(plot_data):
+                        person_counter = custom_processor.person_counter
+                        if person_counter == 1:
+                            print("1 person in the room")
+                        else:
+                            print(person_counter, " persons in the room")
 
         # Handle sleep time
         if use_sleep:
@@ -250,8 +250,6 @@ class customProcess:
     def evaluate_detection(self, detection):
         ampl_dist = detection[-1]["com"] - detection[0]["com"]
         ampl_dir = 0
-        phase_dir = 0
-        phase_dist = 0
         if abs(ampl_dist) > self.distance_threshold:
 
             if DEBUG:
@@ -262,69 +260,14 @@ class customProcess:
                 ampl_dir = -1
             else:
                 ampl_dir = 1
-            phase_val = self.evaluate_phase(detection)
-            phase_dir = phase_val[0]
-            phase_dist = phase_val[1]
-            if phase_dir == ampl_dir: #and phase_dist > self.distance_threshold:
-                if phase_dir == self.in_value:
-                    self.person_counter += 1
-                    return True
-                else:  # ampl_dir can't be 0, so phase_dir != 0, so no need to check for 0
-                    self.person_counter -= 1
-                    return True
+
+            if ampl_dir == self.in_value:
+                self.person_counter += 1
+            else:
+                self.person_counter -= 1
+            return True
         else:
             return False
-
-    def evaluate_phase(self, detection):
-
-        # loop through detection
-        angle_arr = []
-        for i in detection: # Is it data length we want to look at? Gives num points in the array?
-            # get data index from com, not exact? Shouldn't matter since there will still be reliable phase at com?
-            com = i["com"]
-            fract_into_data_length = ((com - self.range_start) / self.range_interval) * self.data_length
-            phase_index = math.floor(fract_into_data_length)
-            angle_arr.append(i["arg"][phase_index]) # Could be wrong
-
-        if DEBUG:
-            print("len(angle_arr):", len(angle_arr))
-            print("len(detection):", len(detection))
-
-        # Unwrap to get real phase
-        angle_arr = np.unwrap(angle_arr)
-
-        if DEBUG:
-            for j in angle_arr:
-                print(j)
-
-        # Right now the velocity isn't really interesting? It's extremely hard to work out a threshold?
-        # Better to double check the direction?
-
-        # Calculate total angle shift
-        total_shift = angle_arr[-1] - angle_arr[0] # Does this translate correctly to the direction?
-
-        if DEBUG:
-            print("angle_arr[-1]:", angle_arr[-1])
-            print("angle_arr[0]:", angle_arr[0])
-            print("total_shift:", total_shift)
-
-        # Get distance and then direction from this
-        phase_dist = self.wavelength*(total_shift/(4*np.pi))
-        phase_dir = 0
-
-        if DEBUG:
-            print("Phase_dist:", phase_dist)
-            input("Enter")
-
-        if phase_dist > 0:
-            phase_dir = 1
-        elif phase_dist < 0:
-            phase_dir = -1
-
-        val = []
-        val.append(phase_dir)
-        val.append(phase_dist)
-        return val
 
 
 
