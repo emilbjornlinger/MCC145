@@ -10,13 +10,13 @@ from acconeer_utils.pg_process import PGProcess, PGProccessDiedException
 
 DIST_THRESHOLD = 0.2
 AMPL_THRESHOLD = 0.03
-DEBUG = True
+DEBUG = False
 DEBUG_PRINT = False
 
 
 def main():
-    load_data()
-    #sensor_read()
+    #load_data()
+    sensor_read()
 
 
 def sensor_read():
@@ -56,15 +56,15 @@ def sensor_read():
 
         if plot_data is not None:
             try:
-                print(np.amax(plot_data["abs"]))
+                #print(np.amax(plot_data["abs"]))
                 if custom_processor.process(plot_data):
                     person_counter = custom_processor.person_counter
                     if person_counter == 1:
                         print("1 person in the room")
-                        input("Enter")
+                        #input("Enter")
                     else:
                         print(person_counter, " persons in the room")
-                        input("Enter")
+                        #input("Enter")
 
             except PGProccessDiedException:
                 break
