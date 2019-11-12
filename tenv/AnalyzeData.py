@@ -2,15 +2,17 @@
 
 from ProcessData import load_data
 import json
+import pandas as pd
 
 DEBUG = False
 DEBUG_PRINT = False
-AMPL_THRESHOLD = [0.03, 0.02, 0.01]
-DIST_THRESHOLD = [0.2, 0.1, 0.05]
+AMPL_THRESHOLD = [0.1, 0.04, 0.02, 0.01, 0.005]
+DIST_THRESHOLD = [0.5, 0.2, 0.1, 0.05]
 
 def main():
 
     #create_data()
+    #create_xls()
 
     #Load file with data
     with open("dataSet.json", "r") as f:
@@ -37,7 +39,7 @@ def main():
                 success = False
                 if person_counter == dir:
                     success = True
-                output_dict[i][0][str(AMPL_THRESHOLD) + ", " + str(DIST_THRESHOLD)] = success
+                output_dict[i][0][str(j) + ", " + str(k)] = success
 
     # Create output
     with open('dataResult.json', 'w', encoding='utf-8') as f:
@@ -63,6 +65,16 @@ def create_data():
 
     with open('dataSet.json', 'w', encoding='utf-8') as f:
         json.dump(x, f, ensure_ascii=False, indent=4)
+
+def create_xls():
+    # Load file with data
+    with open("dataResult.json", "r") as f:
+        data_object = json.load(f)
+
+    json_string = json.dumps(data_object)
+
+    df = pd.read_json(json_string)
+    df.to_excel("output.xls", index=False)
 
 if __name__ == "__main__":
     main()

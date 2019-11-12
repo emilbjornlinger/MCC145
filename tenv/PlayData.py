@@ -17,10 +17,10 @@ def main():
 def loadData():
 
     # Get data
-    file_name = "45su.pkl"
+    file_name = "60si.pkl"
     with open(file_name, "rb") as infile:
         data = pickle.load(infile)
-    file_name_meta = "meta45su.pkl"
+    file_name_meta = "meta60si.pkl"
     with open(file_name_meta, "rb") as infile:
         session_info = pickle.load(infile)
 
