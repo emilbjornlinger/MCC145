@@ -1,0 +1,86 @@
+{
+    "set1": [
+        {
+            "file": "30mi.pkl",
+            "metafile": "meta30mi.pkl",
+            "dir": 1
+        }
+    ],
+    "set2": [
+        {
+            "file": "30mu.pkl",
+            "metafile": "meta30mu.pkl",
+            "dir": -1
+        }
+    ],
+    "set3": [
+        {
+            "file": "30si.pkl",
+            "metafile": "meta30si.pkl",
+            "dir": 1
+        }
+    ],
+    "set4": [
+        {
+            "file": "30su.pkl",
+            "metafile": "meta30su.pkl",
+            "dir": -1
+        }
+    ],
+    "set5": [
+        {
+            "file": "45mi.pkl",
+            "metafile": "meta45mi.pkl",
+            "dir": 1
+        }
+    ],
+    "set6": [
+        {
+            "file": "45mu.pkl",
+            "metafile": "meta45mu.pkl",
+            "dir": -1
+        }
+    ],
+    "set7": [
+        {
+            "file": "45si.pkl",
+            "metafile": "meta45si.pkl",
+            "dir": 1
+        }
+    ],
+    "set8": [
+        {
+            "file": "45su.pkl",
+            "metafile": "meta45su.pkl",
+            "dir": -1
+        }
+    ],
+    "set9": [
+        {
+            "file": "60mi.pkl",
+            "metafile": "meta60mi.pkl",
+            "dir": 1
+        }
+    ],
+    "set10": [
+        {
+            "file": "60mu.pkl",
+            "metafile": "meta60mu.pkl",
+            "dir": -1
+        }
+    ],
+    "set11": [
+        {
+            "file": "60si.pkl",
+            "metafile": "meta60si.pkl",
+            "dir": 1
+        }
+    ],
+    "set12": [
+        {
+            "file": "60su.pkl",
+            "metafile": "meta60su.pkl",
+            "dir": -1
+        }
+    ]
+}

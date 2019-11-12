@@ -8,15 +8,21 @@ from acconeer_utils.clients import configs
 from acconeer_utils import example_utils
 from acconeer_utils.pg_process import PGProcess, PGProccessDiedException
 
-DIST_THRESHOLD = 0.2
-AMPL_THRESHOLD = 0.03
+DIST_THRESHOLD = 0.05
+AMPL_THRESHOLD = 0.01
 DEBUG = False
 DEBUG_PRINT = False
 
 
 def main():
-    #load_data()
-    sensor_read()
+    # Set sleep behaviour
+    use_sleep = False
+    ans = input("Use sleep: [Y/n]")
+    if ans == "Y" or ans == "y":
+        use_sleep = True
+
+    load_data(use_sleep, DEBUG, DEBUG_PRINT, AMPL_THRESHOLD, DIST_THRESHOLD, "30mi.pkl", "meta30mi.pkl")
+    #sensor_read()
 
 
 def sensor_read():
@@ -81,12 +87,12 @@ def get_sensor_config():
     return config
 
 
-def load_data():
+def load_data(use_sleep, debug, debug_print, ampl_threshold, dist_threshold, filename = "", metafilename = ""):
     # get data
-    file_name = "data2.pkl"
+    file_name = filename
     with open(file_name, "rb") as infile:
         data = pickle.load(infile)
-    file_name_meta = "metadata2.pkl"
+    file_name_meta = metafilename
     with open(file_name_meta, "rb") as infile:
         session_info = pickle.load(infile)
 
@@ -98,17 +104,14 @@ def load_data():
 
     processor = PhaseTrackingProcessor(sweep_rate)
 
-    # Set sleep behaviour
-    use_sleep = False
-    ans = input("Use sleep: [Y/n]")
-    if ans == "Y" or ans == "y":
-        use_sleep = True
+
     per_time = 1 / sweep_rate
 
     # Instantiate customProcess
-    custom_processor = customProcess(range_length, range_start, AMPL_THRESHOLD, DIST_THRESHOLD, data_length, -1)
+    custom_processor = customProcess(range_length, range_start, ampl_threshold, dist_threshold, data_length, -1)
 
     counter = 0
+    return_counter = 0
 
     for i in data:
         start_time = time()
@@ -116,7 +119,7 @@ def load_data():
         counter += 1
 
         if plot_data is not None:
-            if DEBUG_PRINT:
+            if debug_print:
                 abs = plot_data["abs"]
                 maxVal = np.amax(abs)
                 print("MaxValue:", maxVal)
@@ -124,7 +127,7 @@ def load_data():
 
                 #DEBUG
 
-                if DEBUG:
+                if debug:
                     returnVal = custom_processor.process(plot_data)
                     if returnVal != None:
                         print("Iteration: ", counter)
@@ -138,6 +141,7 @@ def load_data():
                 else:
                     if custom_processor.process(plot_data):
                         person_counter = custom_processor.person_counter
+                        return_counter = person_counter
                         if person_counter == 1:
                             print("1 person in the room")
                         else:
@@ -151,6 +155,7 @@ def load_data():
                 sleep(sleep_time)
 
     print("Counter finish:", counter)
+    return return_counter
 
 class PhaseTrackingProcessor:
     def __init__(self, sweep_rate):
@@ -238,7 +243,7 @@ class customProcess:
 
     def process(self, data):
         # Check if over threshold
-        if np.amax(data["abs"]) > self.ampl_threshold:  # This needs finetuning, create a delay effect
+        if np.amax(data["abs"]) > self.ampl_threshold:
             self.presence_array.append(data)
         # Else check if last was and evaluate and clear
         else:
